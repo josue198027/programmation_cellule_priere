@@ -542,9 +542,9 @@ function generateMonthlyFridays() {
     html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">';
     html += '<input type="text" placeholder="Dirigeant(e)" data-index="' + i + '" data-field="dirigeant" style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;">';
     html += '<input type="text" placeholder="Lecteur/trice" data-index="' + i + '" data-field="lecteur" style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;">';
+    html += '<input type="text" placeholder="Intercesseur/se" data-index="' + i + '" data-field="intercesseur" style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;">';
     html += '<input type="text" placeholder="Lecture biblique" data-index="' + i + '" data-field="lecture" style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;">';
     html += '<input type="text" placeholder="Orateur/trice" data-index="' + i + '" data-field="orateur" style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;">';
-    html += '<input type="text" placeholder="Intercesseur/se" data-index="' + i + '" data-field="intercesseur" style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;">';
     html += '</div></div>';
   });
   html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 1rem;">';
@@ -564,15 +564,15 @@ function generateMonthlyFridays() {
 }
 
 function saveMonthlyData() {
-  const validEntries = monthlyData.filter(d => d.dirigeant && d.lecteur && d.lecture && d.orateur);
+  const validEntries = monthlyData.filter(d => d.dirigeant && d.lecteur && d.lecture && d.orateur && d.intercesseur);
   if (validEntries.length === 0) { alert('Veuillez remplir au moins une programmation complète'); return; }
   validEntries.forEach(entry => {
     const dateStr = toDateString(entry.date);
     const existingIdx = programs.findIndex(p => p.date === dateStr);
     if (existingIdx >= 0) {
-      programs[existingIdx] = { date: dateStr, dirigeant: entry.dirigeant, lecteur: entry.lecteur, lecture: entry.lecture, orateur: entry.orateur };
+      programs[existingIdx] = { date: dateStr, dirigeant: entry.dirigeant, lecteur: entry.lecteur, lecture: entry.lecture, orateur: entry.orateur, intercesseur: entry.intercesseur };
     } else {
-      programs.push({ date: dateStr, dirigeant: entry.dirigeant, lecteur: entry.lecteur, lecture: entry.lecture, orateur: entry.orateur });
+      programs.push({ date: dateStr, dirigeant: entry.dirigeant, lecteur: entry.lecteur, lecture: entry.lecture, orateur: entry.orateur, intercesseur: entry.intercesseur });
     }
   });
   render();
@@ -602,43 +602,44 @@ function addLogoToPDF(doc, x, y, size) {
 async function exportMonthlyPDF() {
   const month = parseInt(document.getElementById('month-select').value);
   const year = parseInt(document.getElementById('year-select').value);
-  const validEntries = monthlyData.filter(d => d.dirigeant || d.lecteur || d.lecture || d.orateur);
+  const validEntries = monthlyData.filter(d => d.dirigeant || d.lecteur || d.lecture || d.orateur || d.intercesseur);
   if (validEntries.length === 0) { alert('Veuillez remplir au moins une programmation'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   
   // Header compact avec fond beige - logo à gauche, texte à droite
   doc.setFillColor(253, 246, 227);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, 28, 'F');
   doc.setDrawColor(201, 162, 39);
   doc.setLineWidth(1);
-  doc.line(0, 40, 210, 40);
+  doc.line(0, 28, 210, 28);
   
   // Logo à gauche
-  await addLogoToPDF(doc, 12, 4, 32);
+  await addLogoToPDF(doc, 12, 3, 22);
   
   // Texte à droite du logo
-  doc.setFontSize(20);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(93, 78, 55);
-  doc.text('Cellule de prière', 52, 16);
-  
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(139, 115, 85);
-  doc.text('Programmation du mois ' + months[month] + ' ' + year, 52, 26);
+  doc.text('Cellule de prière', 40, 11);
   
   doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(139, 115, 85);
+  doc.text('Programmation du mois ' + months[month] + ' ' + year, 40, 19);
+  
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(139, 115, 85);
-  doc.text('Chaque vendredi - 21h00 à 22h00', 52, 35);
+  doc.text('Chaque vendredi - 21h00 à 22h00', 40, 26);
   
-  // Configuration des cartes - taille fixe compacte
+  // Configuration des cartes
   const numFridays = monthlyData.length;
-  const cardHeight = 32;
-  const gap = 6;
+  const cardHeight = 46;
+  const gap = 4;
   const totalCardsHeight = numFridays * cardHeight + (numFridays - 1) * gap;
-  const startY = 48 + (200 - totalCardsHeight) / 2; // Centrer verticalement dans l'espace disponible
+  const availableSpace = 285 - 33;
+  const startY = 33 + Math.max(0, (availableSpace - totalCardsHeight) / 2);
   
   let y = startY;
   monthlyData.forEach((p, idx) => {
@@ -650,46 +651,51 @@ async function exportMonthlyPDF() {
     doc.roundedRect(15, y, 180, cardHeight, 3, 3, 'S');
     
     // Date du vendredi - ligne du haut
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(93, 78, 55);
-    doc.text('Vendredi ' + p.date.getDate() + ' ' + months[month] + ' ' + year, 20, y + 7);
+    doc.text('Vendredi ' + p.date.getDate() + ' ' + months[month] + ' ' + year, 20, y + 8);
     
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(120);
-    doc.text('21h00 - 22h00', 180, y + 7, { align: 'right' });
+    doc.text('21h00 - 22h00', 180, y + 8, { align: 'right' });
     
     // Ligne de séparation fine
     doc.setDrawColor(201, 162, 39);
     doc.setLineWidth(0.2);
-    doc.line(20, y + 10, 190, y + 10);
+    doc.line(20, y + 12, 190, y + 12);
     
-    // Informations compactes sur 2 lignes
+    // Informations sur 3 lignes
     const col1 = 20, col2 = 110;
-    const row1 = y + 17, row2 = y + 26;
+    const row1 = y + 20, row2 = y + 31, row3 = y + 42;
     
-    doc.setFontSize(8);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(93, 78, 55);
     doc.text('Dirigeant(e):', col1, row1);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.dirigeant || '-', col1 + 22, row1);
+    doc.text(p.dirigeant || '-', col1 + 30, row1);
     
     doc.setFont('helvetica', 'bold');
     doc.text('Orateur/trice:', col2, row1);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.orateur || '-', col2 + 22, row1);
+    doc.text(p.orateur || '-', col2 + 30, row1);
     
     doc.setFont('helvetica', 'bold');
     doc.text('Lecteur/trice:', col1, row2);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.lecteur || '-', col1 + 22, row2);
+    doc.text(p.lecteur || '-', col1 + 30, row2);
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Lecture biblique:', col2, row2);
+    doc.text('Intercesseur/se:', col2, row2);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.lecture || '-', col2 + 28, row2);
+    doc.text(p.intercesseur || '-', col2 + 38, row2);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Lecture biblique:', col1, row3);
+    doc.setFont('helvetica', 'normal');
+    doc.text(p.lecture || '-', col1 + 36, row3);
     
     y += cardHeight + gap;
   });
@@ -745,6 +751,7 @@ function render() {
         '<div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #C9A227, #E6C84B); display: flex; align-items: center; justify-content: center; color: #5D4E37; font-size: 12px; font-weight: 500;">' + getInitials(p.dirigeant) + '</div><div><p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Dirigeant(e)</p><p style="font-size: 14px; color: var(--color-text-primary); margin: 2px 0 0 0; font-weight: 500;">' + p.dirigeant + '</p></div></div>' +
         '<div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0F6E56, #1D9E75); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 500;">' + getInitials(p.orateur) + '</div><div><p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Orateur/trice</p><p style="font-size: 14px; color: var(--color-text-primary); margin: 2px 0 0 0; font-weight: 500;">' + p.orateur + '</p></div></div>' +
         '<div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #BA7517, #EF9F27); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 500;">' + getInitials(p.lecteur) + '</div><div><p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Lecteur/trice</p><p style="font-size: 14px; color: var(--color-text-primary); margin: 2px 0 0 0; font-weight: 500;">' + p.lecteur + '</p></div></div>' +
+        '<div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6B48C8, #9B7DE8); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 500;">' + getInitials(p.intercesseur) + '</div><div><p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Intercesseur/se</p><p style="font-size: 14px; color: var(--color-text-primary); margin: 2px 0 0 0; font-weight: 500;">' + p.intercesseur + '</p></div></div>' +
         '<div style="display: flex; align-items: center; gap: 10px;"><div style="width: 36px; height: 36px; border-radius: 8px; background: var(--color-background-secondary); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div><div><p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Lecture</p><p style="font-size: 14px; color: var(--color-text-primary); margin: 2px 0 0 0; font-weight: 500;">' + p.lecture + '</p></div></div>' +
       '</div></div></div>';
   }).join('');
@@ -775,38 +782,39 @@ async function exportPDF() {
   
   // Header compact avec fond beige - logo à gauche, texte à droite
   doc.setFillColor(253, 246, 227);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, 28, 'F');
   doc.setDrawColor(201, 162, 39);
   doc.setLineWidth(1);
-  doc.line(0, 40, 210, 40);
+  doc.line(0, 28, 210, 28);
   
   // Logo à gauche
-  await addLogoToPDF(doc, 12, 4, 32);
+  await addLogoToPDF(doc, 12, 3, 22);
   
   // Texte à droite du logo
-  doc.setFontSize(20);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(93, 78, 55);
-  doc.text('Cellule de prière', 52, 16);
+  doc.text('Cellule de prière', 40, 11);
   
   if (progMonth && progYear) {
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(139, 115, 85);
-    doc.text('Programmation du mois ' + progMonth + ' ' + progYear, 52, 26);
+    doc.text('Programmation du mois ' + progMonth + ' ' + progYear, 40, 19);
   }
   
-  doc.setFontSize(10);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(139, 115, 85);
-  doc.text('Chaque vendredi - 21h00 à 22h00', 52, 35);
+  doc.text('Chaque vendredi - 21h00 à 22h00', 40, 26);
   
-  // Configuration des cartes - taille fixe compacte
+  // Configuration des cartes
   const numItems = sorted.length;
-  const cardHeight = 32;
-  const gap = 6;
+  const cardHeight = 46;
+  const gap = 4;
   const totalCardsHeight = numItems * cardHeight + (numItems - 1) * gap;
-  const startY = 48 + (200 - totalCardsHeight) / 2;
+  const availableSpace = 285 - 33;
+  const startY = 33 + Math.max(0, (availableSpace - totalCardsHeight) / 2);
   
   let y = startY;
   sorted.forEach((p) => {
@@ -818,44 +826,49 @@ async function exportPDF() {
     doc.setLineWidth(0.4);
     doc.roundedRect(15, y, 180, cardHeight, 3, 3, 'S');
     
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(93, 78, 55);
-    doc.text('Vendredi ' + date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear(), 20, y + 7);
+    doc.text('Vendredi ' + date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear(), 20, y + 8);
     
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(120);
-    doc.text('21h00 - 22h00', 180, y + 7, { align: 'right' });
+    doc.text('21h00 - 22h00', 180, y + 8, { align: 'right' });
     
     doc.setDrawColor(201, 162, 39);
     doc.setLineWidth(0.2);
-    doc.line(20, y + 10, 190, y + 10);
+    doc.line(20, y + 12, 190, y + 12);
     
     const col1 = 20, col2 = 110;
-    const row1 = y + 17, row2 = y + 26;
+    const row1 = y + 20, row2 = y + 31, row3 = y + 42;
     
-    doc.setFontSize(8);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(93, 78, 55);
     doc.text('Dirigeant(e):', col1, row1);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.dirigeant, col1 + 22, row1);
+    doc.text(p.dirigeant || '-', col1 + 30, row1);
     
     doc.setFont('helvetica', 'bold');
     doc.text('Orateur/trice:', col2, row1);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.orateur, col2 + 22, row1);
+    doc.text(p.orateur || '-', col2 + 30, row1);
     
     doc.setFont('helvetica', 'bold');
     doc.text('Lecteur/trice:', col1, row2);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.lecteur, col1 + 22, row2);
+    doc.text(p.lecteur || '-', col1 + 30, row2);
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Lecture biblique:', col2, row2);
+    doc.text('Intercesseur/se:', col2, row2);
     doc.setFont('helvetica', 'normal');
-    doc.text(p.lecture, col2 + 28, row2);
+    doc.text(p.intercesseur || '-', col2 + 38, row2);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Lecture biblique:', col1, row3);
+    doc.setFont('helvetica', 'normal');
+    doc.text(p.lecture || '-', col1 + 36, row3);
     
     y += cardHeight + gap;
   });
